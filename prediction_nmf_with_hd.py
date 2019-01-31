@@ -38,7 +38,7 @@ def ndcg_at_k(r, k, method=0):
 
 def perform_matrix_reconstruction(bipart_graph):
 
-    model = NMF(n_components=10, init= 'nndsvd')
+    model = NMF(n_components=10, init= 'random')
     WW = model.fit_transform(bipart_graph)
     HH = model.components_
     WW = sparse.csr_matrix(WW)
@@ -65,10 +65,10 @@ def compute_score(TG):
     return state_matrix
 
 
-def innerfold(IDX,m,n):
-    mask_idx = np.unravel_index(IDX, (m, n))
+def innerfold(IDX1,IDX2,m,n):
+    mask_idx = np.unravel_index(IDX1, (m, n))
     side_effects_drug_relation_copy = matrix.copy()
-    target_idx = np.unravel_index(IDX, (m, n))
+    target_idx = np.unravel_index(IDX2, (m, n))
     ###making all the links to predict as 0 ###############    
     for i in range(len(mask_idx[0])):
         side_effects_drug_relation_copy[mask_idx[0][i], mask_idx[1][i]] = 0
@@ -159,18 +159,30 @@ FOLDS = 10
 sz = m * n
 IDX = list(range(sz))
 #fsz = int(sz/FOLDS)
-fsz = int(sz * 0.8)
+fsz = int(sz /FOLDS)
 np.random.shuffle(IDX)
 offset = 0
+AUC_train_roc = np.zeros(FOLDS)
+AUC_train_pr = np.zeros(FOLDS)
+ndcg_folds_train = np.zeros(FOLDS)
+####for test sets####
 AUC_test_roc = np.zeros(FOLDS)
 AUC_test_pr = np.zeros(FOLDS)
 ndcg_folds = np.zeros(FOLDS)
 
+np.random.shuffle(IDX)
 for f in xrange(FOLDS):
+    idx_test = IDX[offset:offset + fsz]
+    idx_train = np.setdiff1d(IDX, idx_test)
+    np.random.shuffle(idx_train)
     print "Fold:",f
     start_time = time.time()
-    IDX1 = random.sample(xrange(sz),fsz)
-    AUC_test_roc[f],AUC_test_pr[f],ndcg_folds[f] = innerfold(IDX1,m,n)
+    #IDX1 = random.sample(xrange(sz),fsz)
+    idx_train = idx_train[:fsz].tolist()
+    print "Train Fold:",f
+    AUC_train_roc[f], AUC_train_pr[f],ndcg_folds_train[f] = innerfold(idx_train+idx_test,idx_train,m,n)
+    print "Test Fold:",f	
+    AUC_test_roc[f],AUC_test_pr[f],ndcg_folds[f] = innerfold(idx_test,idx_test,m,n)
     print("--- %s seconds ---" % (time.time() - start_time)) 
     offset += fsz
 
