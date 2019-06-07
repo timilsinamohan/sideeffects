@@ -52,7 +52,7 @@ def perform_matrix_reconstruction(bipart_graph):
 
 def compute_score(TG):
 
-    iteration = 2
+    iteration = 30
     lambda_diff = 1.0
     I = np.eye(n,n,dtype=np.float32)
     V = I + (lambda_diff/iteration) * H
